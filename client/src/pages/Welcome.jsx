@@ -56,10 +56,10 @@ const Welcome = ({ username, setUsername, room, setRoom, setSocket }) => {
               onChange={(e) => setRoom(e.target.value)}
             >
               <option value="select-room">--- Choose a room ---</option>
-              <option value="JavaScript">JavaScript</option>
-              <option value="Node">Node</option>
-              <option value="React">React</option>
-              <option value="Next">Next</option>
+              <option value="javaScript">JavaScript</option>
+              <option value="node">Node</option>
+              <option value="react">React</option>
+              <option value="next">Next</option>
             </select>
           </div>
           <button

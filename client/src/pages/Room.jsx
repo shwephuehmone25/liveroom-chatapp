@@ -14,9 +14,28 @@ const Room = ({ username, room, socket }) => {
   const navigate = useNavigate();
   const [roomUsers, setRoomUsers] = useState([]);
   const [receivedMessages, setReceivedMessages] = useState([]);
-  const [message, setMessage] = useState(""); // Change here
+  const [message, setMessage] = useState("");
 
   const boxDivRef = useRef(null);
+
+  const getOldMessages = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SERVER}/chat/${room}`);
+      if (response.status === 403) {
+        console.error("Room is not opened.");
+        return navigate("/");
+      }
+      const data = await response.json();
+      console.log("Received old messages:", data);
+      setReceivedMessages((prev) => [...prev, ...data]);
+    } catch (error) {
+      console.error("Error fetching old messages:", error);
+    }
+  };  
+
+  useEffect((_) => {
+    getOldMessages();
+  }, []);
 
   useEffect(() => {
     const handleReceivedMessage = (data) => {
