@@ -1,10 +1,29 @@
 const express = require("express");
 const socketIO = require("socket.io");
+const mongoose = require("mongoose")
+require("dotenv").config();
+const Message = require("./models/Message");
+const messageController = require("./controllers/message");
+
 const cors = require("cors");
+
 const formatMessage = require("./utils/formatMsg");
+const {
+  savedUsers,
+  getDisconnectedUser,
+  getSameRoomUsers,
+} = require("./utils/user");
 
 const app = express();
 app.use(cors());
+
+app.get("/chat/:roomName", messageController.getOldMessage);
+
+mongoose.connect(process.env.MONGODB_URL).then( (_) =>
+  {
+    console.log("Database is connected");
+  }
+).catch();
 
 const server = app.listen(5000, () => {
   console.log("Server is running at port 5000!");
@@ -13,41 +32,6 @@ const server = app.listen(5000, () => {
 const io = socketIO(server, {
   cors: "*",
 });
-
-const users = [];
-
-// save user information
-const savedUsers = (id, username, room) => {
-  // Check if username is already in the room
-  const existingUser = users.find(
-    (user) => user.room === room && user.username === username
-  );
-
-  if (existingUser) {
-    console.error("Username is already taken in this room");
-    return null;
-  }
-
-  const user = { id, username, room };
-  users.push(user);
-  return user;
-};
-
-// get users in the same room
-const getSameRoomUsers = (room) => {
-  return users.filter((user) => user.room === room);
-};
-
-// get disconnected user
-const getDisconnectedUser = (id) => {
-  const index = users.findIndex((user) => user.id === id);
-
-  if (index !== -1) {
-    return users.splice(index, 1)[0];
-  }
-
-  return null;
-};
 
 // Socket connection handling
 io.on("connection", (socket) => {
@@ -66,7 +50,10 @@ io.on("connection", (socket) => {
       // Broadcast to others in the room that a new user has joined
       socket.broadcast
         .to(user.room)
-        .emit("message", formatMessage(BOT, `${user.username} joined the room.`));
+        .emit(
+          "message",
+          formatMessage(BOT, `${user.username} joined the room.`)
+        );
 
       // Emit room users to everyone in the room
       io.to(user.room).emit("room_users", getSameRoomUsers(user.room));
@@ -75,6 +62,13 @@ io.on("connection", (socket) => {
       socket.on("send_message", (data) => {
         // Broadcast the message to everyone in the room
         io.to(user.room).emit("message", formatMessage(user.username, data));
+
+        //store message in database
+        Message.create({
+          username: user.username,
+          message: data,
+          room: user.room
+        })
       });
     } else {
       console.error("Invalid data received for 'joined_room' event");
